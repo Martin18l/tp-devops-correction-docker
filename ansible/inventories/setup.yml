@@ -1,7 +1,7 @@
 ---
 all:
   vars:
-    ansible_user: "{{ lookup('env', 'DEPLOY_USER') | default('ubuntu', true) }}"
+    ansible_user: "{{ lookup('env', 'DEPLOY_USER') | default('admin', true) }}"
     ansible_ssh_private_key_file: "{{ lookup('env', 'ANSIBLE_PRIVATE_KEY_FILE') }}"
     ansible_python_interpreter: /usr/bin/python3
     dockerhub_username: "{{ lookup('env', 'DOCKERHUB_USERNAME') }}"

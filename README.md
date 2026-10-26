@@ -5,25 +5,42 @@ j'ai modifié
 
 ## Déploiement avec Ansible
 
-Le dossier `ansible/` installe Docker sur Ubuntu 24.04 et déploie la base PostgreSQL,
+Le dossier `ansible/` installe Docker sur le serveur Debian du TD et déploie la base PostgreSQL,
 l'API et le proxy HTTP dans le réseau Docker `my-network`. Les données PostgreSQL
 sont conservées dans le volume `db-volume`. Le proxy expose le port 80 et route
 les requêtes vers l'API.
 
 ### Préparer l'accès au serveur
 
-Le serveur doit être sous Ubuntu 24.04, accessible en SSH avec un utilisateur
-disposant des droits `sudo`. La clé privée SSH et le mot de passe PostgreSQL ne
-doivent pas être ajoutés au dépôt ni envoyés dans un message.
+Ansible s'exécute dans Ubuntu sous WSL sur ton PC et se connecte en SSH au
+serveur Debian distant fourni pour le TD. Utilise l'utilisateur `admin` et le
+domaine qui t'a été attribué. La clé privée SSH et le mot de passe PostgreSQL
+ne doivent pas être ajoutés au dépôt ni envoyés dans un message. Le rôle Docker
+retire aussi Apache s'il est installé, car le proxy du projet utilise le port 80.
 
-Ansible doit être lancé depuis Linux, macOS ou WSL (le serveur distant est
-Ubuntu). Pour un lancement manuel, définir les variables d'environnement
-suivantes dans le shell depuis lequel Ansible est exécuté :
+Pour tester d'abord la connexion avec l'inventaire du TD :
+
+```sh
+ansible all -i /etc/ansible/hosts -m ping --private-key="$HOME/chemin/vers/ta-cle" -u admin
+```
+
+Après le `pong`, vérifier les informations du serveur :
+
+```sh
+ansible all -i /etc/ansible/hosts -m ansible.builtin.setup -a "filter=ansible_distribution*"
+```
+
+Ouvre ensuite `http://<ton-domaine-takima>` dans le navigateur Windows. Cette
+étape vérifie Apache installé dans le TD; le déploiement de l'application le
+remplacera par le proxy du projet.
+
+Pour utiliser le playbook du projet, définir les variables d'environnement
+suivantes dans le shell WSL depuis lequel Ansible est exécuté :
 
 | Variable | Contenu |
 | --- | --- |
 | `DEPLOY_HOST` | Nom DNS ou adresse IP du serveur |
-| `DEPLOY_USER` | Utilisateur SSH (par exemple `ubuntu`) |
+| `DEPLOY_USER` | Utilisateur SSH (`admin` pour le serveur du TD) |
 | `ANSIBLE_PRIVATE_KEY_FILE` | Chemin local vers la clé SSH privée |
 | `DOCKERHUB_USERNAME` | Compte Docker Hub propriétaire des images |
 | `POSTGRES_PASSWORD` | Mot de passe PostgreSQL |
@@ -63,8 +80,8 @@ suivants (le workflow utilise également le secret de dépôt existant
 
 | Secret | Contenu |
 | --- | --- |
-| `DEPLOY_HOST` | Nom DNS ou adresse IP du serveur |
-| `DEPLOY_USER` | Utilisateur SSH avec accès `sudo` |
+| `DEPLOY_HOST` | Domaine ou adresse IP du serveur |
+| `DEPLOY_USER` | Utilisateur SSH (`admin`) avec accès `sudo` |
 | `DEPLOY_SSH_PRIVATE_KEY` | Clé privée dédiée au déploiement |
 | `DEPLOY_KNOWN_HOSTS` | Clé d'hôte SSH vérifiée, au format `known_hosts` |
 | `POSTGRES_PASSWORD` | Mot de passe PostgreSQL |

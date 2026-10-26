@@ -44,25 +44,84 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
 
       - name: Build image and push backend
         uses: docker/build-push-action@v6
         with:
           context: ./simple-api
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-simple-api:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-simple-api:latest
           push: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build image and push database
         uses: docker/build-push-action@v6
         with:
           context: ./database
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-database:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-database:latest
           push: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build image and push httpd
         uses: docker/build-push-action@v6
         with:
           context: ./http-server
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-http-server:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-http-server:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-http-server:latest
           push: ${{ github.ref == 'refs/heads/main' }}
+
+  deploy:
+    needs: build-and-push-docker-image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      IMAGE_TAG: ${{ github.sha }}
+      ANSIBLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/deploy_key
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_PRIVATE_KEY DEPLOY_KNOWN_HOSTS DOCKERHUB_USERNAME POSTGRES_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required GitHub Actions secret for $name"
+              exit 1
+            fi
+          done
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$ANSIBLE_PRIVATE_KEY_FILE"
+          chmod 600 "$ANSIBLE_PRIVATE_KEY_FILE"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Install Ansible and Docker collection
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ansible-venv"
+          "$RUNNER_TEMP/ansible-venv/bin/pip" install ansible
+          "$RUNNER_TEMP/ansible-venv/bin/ansible-galaxy" collection install -r requirements.yml
+          echo "$RUNNER_TEMP/ansible-venv/bin" >> "$GITHUB_PATH"
+        working-directory: ansible
+
+      - name: Deploy application
+        run: ansible-playbook playbook.yml
+        working-directory: ansible

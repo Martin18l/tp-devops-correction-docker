@@ -1,0 +1,55 @@
+---
+- name: Install Docker repository prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create APT keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Docker's official APT signing key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Set Docker APT architecture
+  ansible.builtin.set_fact:
+    docker_apt_architecture: >-
+      {{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_architecture] }}
+
+- name: Add Docker's official APT repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ docker_apt_architecture }} signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu
+      {{ ansible_distribution_release }} stable
+    filename: docker
+    state: present
+    update_cache: true
+
+- name: Install Docker Engine and Python SDK
+  ansible.builtin.apt:
+    name:
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-ce
+      - docker-ce-cli
+      - docker-compose-plugin
+      - python3-docker
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure Docker is enabled and running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true

@@ -1,0 +1,12 @@
+---
+- name: Run the HTTP proxy
+  community.docker.docker_container:
+    name: httpd
+    image: "{{ dockerhub_username }}/tp-devops-http-server:{{ docker_image_tag }}"
+    pull: always
+    state: started
+    restart_policy: unless-stopped
+    published_ports:
+      - "80:80"
+    networks:
+      - name: my-network

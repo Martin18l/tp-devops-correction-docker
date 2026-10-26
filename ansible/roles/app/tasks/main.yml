@@ -1,0 +1,14 @@
+---
+- name: Run the API
+  community.docker.docker_container:
+    name: simple-api
+    image: "{{ dockerhub_username }}/tp-devops-simple-api:{{ docker_image_tag }}"
+    pull: always
+    state: started
+    restart_policy: unless-stopped
+    env:
+      DATABASE_HOST: database
+      DATABASE_PASSWORD: "{{ postgres_password }}"
+    networks:
+      - name: my-network
+  no_log: true

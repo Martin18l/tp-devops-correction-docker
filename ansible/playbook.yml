@@ -1,0 +1,29 @@
+---
+- name: Deploy the application stack
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Verify that deployment variables are provided
+      ansible.builtin.assert:
+        that:
+          - dockerhub_username | length > 0
+          - docker_image_tag | length > 0
+          - postgres_password | length > 0
+        fail_msg: Set DOCKERHUB_USERNAME, IMAGE_TAG, and POSTGRES_PASSWORD before running this playbook.
+      no_log: true
+
+    - name: Verify that the target is Ubuntu
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_major_version == "24"
+        fail_msg: This playbook currently supports Ubuntu 24.04.
+
+  roles:
+    - docker
+    - network
+    - database
+    - app
+    - proxy

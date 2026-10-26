@@ -43,6 +43,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout front-end
+        uses: actions/checkout@v4
+        with:
+          repository: Martin18l/devops-front
+          ref: 62fc7baa2af69d070b83771da46545d70553f355
+          path: front-src
+
       - name: Login to DockerHub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -75,6 +82,26 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-http-server:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-http-server:latest
+          push: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Configure front-end API URL
+        shell: bash
+        env:
+          FRONT_API_URL: ${{ vars.FRONT_API_URL }}
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ] && [ -z "$FRONT_API_URL" ]; then
+            echo "::error::Set the FRONT_API_URL repository variable before deploying"
+            exit 1
+          fi
+          printf 'VUE_APP_API_URL=%s\n' "${FRONT_API_URL:-localhost:8080}" > front-src/.env.production
+
+      - name: Build image and push front-end
+        uses: docker/build-push-action@v6
+        with:
+          context: ./front-src
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-front:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME || github.repository_owner }}/tp-devops-front:latest
           push: ${{ github.ref == 'refs/heads/main' }}
 
   deploy:

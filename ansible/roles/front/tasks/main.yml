@@ -1,0 +1,10 @@
+---
+- name: Run the front-end
+  community.docker.docker_container:
+    name: front
+    image: "{{ dockerhub_username }}/tp-devops-front:{{ docker_image_tag }}"
+    pull: always
+    state: started
+    restart_policy: unless-stopped
+    networks:
+      - name: my-network

@@ -5,10 +5,10 @@ j'ai modifié
 
 ## Déploiement avec Ansible
 
-Le dossier `ansible/` installe Docker sur le serveur Debian du TD et déploie la base PostgreSQL,
-l'API et le proxy HTTP dans le réseau Docker `my-network`. Les données PostgreSQL
-sont conservées dans le volume `db-volume`. Le proxy expose le port 80 et route
-les requêtes vers l'API.
+Le dossier `ansible/` installe Docker sur le serveur Debian du TD et déploie la
+base PostgreSQL, l'API, le front et le proxy HTTP dans le réseau Docker
+`my-network`. Les données PostgreSQL sont conservées dans le volume `db-volume`.
+Le proxy expose le port 80, sert le front à `/` et route `/api/` vers l'API.
 
 ### Préparer l'accès au serveur
 
@@ -72,6 +72,18 @@ push vers `main`. Les images sont publiées avec le SHA Git et le déploiement
 utilise le SHA exact du workflow, plutôt qu'un tag mutable tel que `latest`.
 Les builds des pull requests ne publient pas d'images et ne lancent pas de
 déploiement.
+
+Le workflow récupère également le fork public `Martin18l/devops-front` à un
+commit fixe, puis construit et publie son image. Pour que le front appelle l'API
+via le proxy, définir la variable GitHub Actions **de dépôt** `FRONT_API_URL`
+dans **Settings → Secrets and variables → Actions → Variables** avec la valeur
+`martin.ladan.takima.school/api` (sans `http://`). Le front construit ses URL
+API avec le préfixe `http://`, et Apache retire `/api/` avant de transmettre les
+requêtes au backend. Si le code du fork change, mettre à jour le SHA `ref` de
+l'étape « Checkout front-end » dans le workflow. Une fois le workflow vert,
+ouvrir `http://martin.ladan.takima.school/` pour vérifier le front et
+`http://martin.ladan.takima.school/api/departments` pour tester directement
+l'API à travers le proxy.
 
 Créer l'environnement GitHub Actions `production`, puis y configurer les secrets
 suivants (le workflow utilise également le secret de dépôt existant

@@ -75,12 +75,13 @@ déploiement.
 
 Le workflow récupère également le fork public `Martin18l/devops-front` à un
 commit fixe, puis construit et publie son image. Pour que le front appelle l'API
-via le proxy, définir la variable GitHub Actions **de dépôt** `FRONT_API_URL`
-dans **Settings → Secrets and variables → Actions → Variables** avec la valeur
-`martin.ladan.takima.school/api` (sans `http://`). Le front construit ses URL
-API avec le préfixe `http://`, et Apache retire `/api/` avant de transmettre les
-requêtes au backend. Si le code du fork change, mettre à jour le SHA `ref` de
-l'étape « Checkout front-end » dans le workflow. Une fois le workflow vert,
+via le proxy, le workflow utilise `martin.ladan.takima.school/api` par défaut.
+Pour remplacer cette adresse, définir la variable GitHub Actions **de dépôt**
+`FRONT_API_URL` dans **Settings → Secrets and variables → Actions → Variables**
+(sans `http://`). Le front construit ses URL API avec le préfixe `http://`, et
+Apache retire `/api/` avant de transmettre les requêtes au backend. Si le code
+du fork change, mettre à jour le SHA `ref` de l'étape « Checkout front-end »
+dans le workflow. Une fois le workflow vert,
 ouvrir `http://martin.ladan.takima.school/` pour vérifier le front et
 `http://martin.ladan.takima.school/api/departments` pour tester directement
 l'API à travers le proxy.

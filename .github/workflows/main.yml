@@ -87,13 +87,9 @@ jobs:
       - name: Configure front-end API URL
         shell: bash
         env:
-          FRONT_API_URL: ${{ vars.FRONT_API_URL }}
+          FRONT_API_URL: ${{ vars.FRONT_API_URL || 'martin.ladan.takima.school/api' }}
         run: |
-          if [ "$GITHUB_REF" = "refs/heads/main" ] && [ -z "$FRONT_API_URL" ]; then
-            echo "::error::Set the FRONT_API_URL repository variable before deploying"
-            exit 1
-          fi
-          printf 'VUE_APP_API_URL=%s\n' "${FRONT_API_URL:-localhost:8080}" > front-src/.env.production
+          printf 'VUE_APP_API_URL=%s\n' "$FRONT_API_URL" > front-src/.env.production
 
       - name: Build image and push front-end
         uses: docker/build-push-action@v6
